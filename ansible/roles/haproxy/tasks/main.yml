@@ -1,0 +1,31 @@
+---
+- name: Install HAProxy
+  apt:
+    name: haproxy
+    state: present
+    update_cache: yes
+  become: yes
+
+- name: Deploy HAProxy configuration
+  template:
+    src: haproxy.cfg.j2
+    dest: /etc/haproxy/haproxy.cfg
+    mode: '0644'
+  become: yes
+  notify: restart haproxy
+
+- name: Kill old HAProxy (if running)
+  shell: |
+    if pgrep -x haproxy > /dev/null; then
+      pkill -15 haproxy
+      sleep 3
+    fi
+  ignore_errors: yes
+  become: yes
+
+- name: Start HAProxy as contuser
+  shell: |
+    su - contuser -c "/usr/sbin/haproxy -f /etc/haproxy/haproxy.cfg"
+  async: 0
+  poll: 0
+  become: yes

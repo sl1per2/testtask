@@ -1,0 +1,131 @@
+---
+- name: Install keepalived and dependencies
+  apt:
+    name:
+      - keepalived
+      - iproute2
+      - procps
+      - net-tools
+      - iputils-ping
+      - netcat-openbsd
+    state: present
+    update_cache: yes
+
+- name: Create keepalived directory
+  file:
+    path: /etc/keepalived
+    state: directory
+    mode: '0755'
+
+- name: Configure keepalived for lb1 (MASTER)
+  copy:
+    dest: /etc/keepalived/keepalived.conf
+    content: |
+      global_defs {
+         router_id 51
+      }
+
+      vrrp_instance VI_1 {
+          state MASTER
+          interface eth0
+          virtual_router_id 51
+          priority 101
+          advert_int 1
+          authentication {
+              auth_type PASS
+              auth_pass 1234
+          }
+          virtual_ipaddress {
+              172.20.0.100/16
+          }
+      }
+  when: inventory_hostname == "lb1"
+
+- name: Configure keepalived for lb2 (BACKUP)
+  copy:
+    dest: /etc/keepalived/keepalived.conf
+    content: |
+      global_defs {
+         router_id 51
+      }
+
+      vrrp_instance VI_1 {
+          state BACKUP
+          interface eth0
+          virtual_router_id 51
+          priority 100
+          advert_int 1
+          authentication {
+              auth_type PASS
+              auth_pass 1234
+          }
+          virtual_ipaddress {
+              172.20.0.100/16
+          }
+      }
+  when: inventory_hostname == "lb2"
+
+- name: Stop keepalived
+  shell: pkill keepalived 2>/dev/null || true
+  ignore_errors: yes
+
+- name: Start keepalived
+  shell: |
+    /usr/sbin/keepalived -f /etc/keepalived/keepalived.conf -n -l &
+  async: 5
+  poll: 0
+
+- name: Create keepalived exporter script for lb1
+  copy:
+    dest: /usr/local/bin/keepalived_exporter.sh
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      VIP="172.20.0.100"
+      PORT="9101"
+      NODE="lb1"
+
+      while true; do
+        if ip addr show eth0 | grep -q "$VIP"; then
+          METRIC="keepalived_status{node=\"$NODE\",status=\"master\",vip=\"$VIP\"} 1"
+        else
+          METRIC="keepalived_status{node=\"$NODE\",status=\"backup\",vip=\"$VIP\"} 0"
+        fi
+
+        echo -e "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n$METRIC" | nc -l -p $PORT -q 1
+      done
+  when: inventory_hostname == "lb1"
+
+- name: Create keepalived exporter script for lb2
+  copy:
+    dest: /usr/local/bin/keepalived_exporter.sh
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      VIP="172.20.0.100"
+      PORT="9101"
+      NODE="lb2"
+
+      while true; do
+        if ip addr show eth0 | grep -q "$VIP"; then
+          METRIC="keepalived_status{node=\"$NODE\",status=\"master\",vip=\"$VIP\"} 1"
+        else
+          METRIC="keepalived_status{node=\"$NODE\",status=\"backup\",vip=\"$VIP\"} 0"
+        fi
+
+        echo -e "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n$METRIC" | nc -l -p $PORT -q 1
+      done
+  when: inventory_hostname == "lb2"
+
+- name: Stop old exporter
+  shell: |
+    pkill -f keepalived_exporter.sh 2>/dev/null || true
+    killall keepalived_exporter.sh 2>/dev/null || true
+  ignore_errors: yes
+
+- name: Start exporter as contuser
+  shell: |
+    su - contuser -c "nohup /usr/local/bin/keepalived_exporter.sh &"
+  async: 5
+  poll: 0
+  become: yes

@@ -1,0 +1,160 @@
+---
+- name: Update package cache
+  ansible.builtin.apt:
+    update_cache: yes
+  become: yes
+
+- name: Install required packages
+  ansible.builtin.apt:
+    name:
+      - wget
+      - curl
+      - git
+      - build-essential
+    state: present
+  become: yes
+
+- name: Check if Go is installed
+  ansible.builtin.stat:
+    path: /usr/local/go/bin/go
+  register: go_binary
+
+- name: Download Go
+  ansible.builtin.get_url:
+    url: https://go.dev/dl/go1.21.5.linux-amd64.tar.gz
+    dest: /tmp/go1.21.5.linux-amd64.tar.gz
+  when: not go_binary.stat.exists
+  become: yes
+
+- name: Install Go
+  ansible.builtin.unarchive:
+    src: /tmp/go1.21.5.linux-amd64.tar.gz
+    dest: /usr/local
+    remote_src: yes
+  when: not go_binary.stat.exists
+  become: yes
+
+- name: Add Go to PATH in .bashrc
+  ansible.builtin.lineinfile:
+    path: /root/.bashrc
+    line: 'export PATH=$PATH:/usr/local/go/bin'
+    create: yes
+  become: yes
+
+- name: Create app directory
+  ansible.builtin.file:
+    path: /app
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Copy main.go for backend1
+  ansible.builtin.copy:
+    content: |
+      package main
+
+      import (
+          "fmt"
+          "net/http"
+          "os"
+      )
+
+      func main() {
+          port := "8080"
+          backendName := "backend 1"
+
+          if name := os.Getenv("BACKEND_NAME"); name != "" {
+              backendName = name
+          }
+
+          http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+              response := fmt.Sprintf("%s\n", backendName)
+              w.Write([]byte(response))
+          })
+
+          http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+              w.WriteHeader(http.StatusOK)
+              w.Write([]byte("OK\n"))
+          })
+
+          fmt.Printf("Starting %s on port %s\n", backendName, port)
+          http.ListenAndServe(":"+port, nil)
+      }
+    dest: /app/main.go
+    mode: '0644'
+  when: inventory_hostname == 'backend1'
+  become: yes
+
+- name: Copy main.go for backend2
+  ansible.builtin.copy:
+    content: |
+      package main
+
+      import (
+          "fmt"
+          "net/http"
+          "os"
+      )
+
+      func main() {
+          port := "8080"
+          backendName := "backend 2"
+
+          if name := os.Getenv("BACKEND_NAME"); name != "" {
+              backendName = name
+          }
+
+          http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+              response := fmt.Sprintf("%s\n", backendName)
+              w.Write([]byte(response))
+          })
+
+          http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+              w.WriteHeader(http.StatusOK)
+              w.Write([]byte("OK\n"))
+          })
+
+          fmt.Printf("Starting %s on port %s\n", backendName, port)
+          http.ListenAndServe(":"+port, nil)
+      }
+    dest: /app/main.go
+    mode: '0644'
+  when: inventory_hostname == 'backend2'
+  become: yes
+
+- name: Build Go application
+  ansible.builtin.shell: |
+    export PATH=$PATH:/usr/local/go/bin
+    cd /app
+    /usr/local/go/bin/go mod init backend || true
+    /usr/local/go/bin/go mod tidy
+    /usr/local/go/bin/go build -o backend main.go
+  become: yes
+  environment:
+    PATH: "/usr/local/go/bin:{{ ansible_env.PATH }}"
+
+- name: Stop existing backend
+  ansible.builtin.shell: pkill -f ./backend || true
+  become: yes
+  ignore_errors: yes
+
+- name: Set ownership for app directory
+  file:
+    path: /app
+    owner: contuser
+    group: contuser
+    recurse: yes
+  become: yes
+
+- name: Start backend as backend user
+  shell: |
+    su - contuser -c "cd /app && nohup ./backend &"
+  become: yes
+  async: 5
+  poll: 0
+
+- name: Wait for backend
+  ansible.builtin.wait_for:
+    port: 8080
+    delay: 2
+    timeout: 30

@@ -1,0 +1,38 @@
+---
+- hosts: localhost
+  become: yes
+  roles:
+    - ansible
+    - ssh
+
+- hosts: all
+  become: yes
+  roles:
+    - users
+
+- hosts: all:!localhost
+  become: yes
+  roles:
+    - node_exporter
+
+- hosts: backend_servers
+  become: yes
+  roles:
+    - backends
+
+- hosts: lb_servers
+  become: yes
+  roles:
+    - ka
+    - haproxy
+
+- hosts: monitoring_back
+  become: yes
+  roles:
+    - victoriametrics
+
+- hosts: monitoring_front
+  become: yes
+  roles:
+    - grafana
+

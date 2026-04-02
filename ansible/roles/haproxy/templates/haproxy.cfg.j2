@@ -1,0 +1,23 @@
+global
+    daemon
+
+defaults
+    mode http
+    timeout connect 5000
+    timeout client 50000
+    timeout server 50000
+
+frontend http_front
+    bind *:80
+    default_backend backend_servers
+
+backend backend_servers
+    balance roundrobin
+    server backend1 172.20.0.20:8080 check
+    server backend2 172.20.0.21:8080 check
+
+frontend prometheus
+    bind *:8404
+    http-request use-service prometheus-exporter if { path /metrics }
+
+

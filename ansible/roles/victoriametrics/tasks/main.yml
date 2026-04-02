@@ -1,0 +1,87 @@
+---
+- name: Update package cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  become: yes
+  changed_when: false
+
+- name: Install required packages
+  apt:
+    name:
+      - wget
+      - curl
+      - tar
+      - procps
+      - net-tools
+    state: present
+  become: yes
+
+- name: Create directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /var/lib/victoriametrics
+    - /etc/victoriametrics
+    - /var/log/victoriametrics
+  become: yes
+
+- name: Download Victoria Metrics
+  get_url:
+    url: https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/v1.93.5/victoria-metrics-linux-amd64-v1.93.5.tar.gz
+    dest: /tmp/victoria-metrics.tar.gz
+  become: yes
+
+- name: Extract Victoria Metrics
+  unarchive:
+    src: /tmp/victoria-metrics.tar.gz
+    dest: /usr/local/bin/
+    remote_src: yes
+    mode: '0755'
+  become: yes
+
+- name: Cleanup archive
+  file:
+    path: /tmp/victoria-metrics.tar.gz
+    state: absent
+  become: yes
+
+- name: Copy promscrape config
+  copy:
+    src: promscrape.yml
+    dest: /etc/victoriametrics/promscrape.yml
+    mode: '0644'
+  become: yes
+
+- name: Stop existing Victoria Metrics
+  shell: |
+    pkill -9 victoria-metrics-prod 2>/dev/null || true
+    killall victoria-metrics-prod 2>/dev/null || true
+  ignore_errors: yes
+  become: yes
+
+- name: Set ownership for victoriametrics directories
+  file:
+    path: "{{ item }}"
+    owner: contuser
+    group: contuser
+    recurse: yes
+  loop:
+    - /var/lib/victoriametrics
+    - /var/log/victoriametrics
+  become: yes
+
+- name: Start Victoria Metrics as contuser (without dumb-init)
+  shell: |
+    su - contuser -c "nohup /usr/local/bin/victoria-metrics-prod -storageDataPath=/var/lib/victoriametrics -httpListenAddr=:8428 -retentionPeriod=30d -promscrape.config=/etc/victoriametrics/promscrape.yml > /dev/null 2>&1 &"
+  become: yes
+
+- name: Wait for Victoria Metrics to start
+  wait_for:
+    port: 8428
+    host: "172.20.0.30"
+    delay: 5
+    timeout: 60
+

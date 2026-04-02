@@ -1,0 +1,115 @@
+---
+- name: Update package cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Install prerequisites
+  apt:
+    name:
+      - wget
+      - curl
+      - gnupg
+      - tar
+      - software-properties-common
+    state: present
+
+- name: Download Grafana package
+  get_url:
+    url: https://dl.grafana.com/oss/release/grafana-8.3.0.linux-amd64.tar.gz
+    dest: /tmp/grafana-8.3.0.linux-amd64.tar.gz
+
+- name: Extract Grafana package
+  unarchive:
+    src: /tmp/grafana-8.3.0.linux-amd64.tar.gz
+    dest: /opt/
+    remote_src: yes
+
+- name: Create directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /var/lib/grafana
+    - /var/log/grafana
+    - /etc/grafana/provisioning/datasources
+    - /etc/grafana/provisioning/dashboards
+
+- name: Configure Grafana
+  copy:
+    dest: /etc/grafana/grafana.ini
+    mode: '0644'
+    content: |
+      [server]
+      protocol = http
+      http_addr = 0.0.0.0
+      http_port = 3000
+      domain = localhost
+
+      [paths]
+      provisioning = /etc/grafana/provisioning
+
+      [auth]
+      disable_login_form = false
+
+      [users]
+      allow_sign_up = false
+      auto_assign_org = true
+      auto_assign_org_role = Admin
+
+      [security]
+      admin_user = admin
+      admin_password = admin
+
+- name: Stop existing Grafana
+  shell: |
+    pkill -f grafana-server 2>/dev/null || true
+    killall grafana-server 2>/dev/null || true
+  ignore_errors: yes
+
+- name: Start Grafana in background
+  shell: |
+    cd /opt/grafana-8.3.0 && nohup /opt/grafana-8.3.0/bin/grafana-server -config=/etc/grafana/grafana.ini -homepath=/opt/grafana-8.3.0 > /dev/null 2>&1 &
+  become: yes
+
+- name: Wait for Grafana to be ready
+  wait_for:
+    port: 3000
+    host: "172.20.0.31"
+    delay: 10
+    timeout: 60
+
+- name: Create Victoria Metrics datasource
+  uri:
+    url: "http://172.20.0.31:3000/api/datasources"
+    method: POST
+    url_username: "admin"
+    url_password: "admin"
+    force_basic_auth: yes
+    headers:
+      Content-Type: "application/json"
+    body:
+      name: "VictoriaMetrics"
+      type: "prometheus"
+      url: "http://172.20.0.30:8428"
+      access: "proxy"
+      isDefault: true
+    body_format: json
+    status_code: [200, 409]
+
+- name: Import dashboard
+  uri:
+    url: "http://172.20.0.31:3000/api/dashboards/db"
+    method: POST
+    url_username: "admin"
+    url_password: "admin"
+    force_basic_auth: yes
+    headers:
+      Content-Type: "application/json"
+    body: "{{ lookup('file', '{{ role_path }}/dashboards/main-dashboard.json') | from_json }}"
+    body_format: json
+  register: import_result
+  until: import_result.status == 200
+  retries: 5
+  delay: 3

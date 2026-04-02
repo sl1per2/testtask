@@ -1,0 +1,39 @@
+---
+- name: Download Node Exporter
+  get_url:
+    url: https://github.com/prometheus/node_exporter/releases/download/v1.7.0/node_exporter-1.7.0.linux-amd64.tar.gz
+    dest: /tmp/node_exporter.tar.gz
+
+- name: Extract Node Exporter
+  unarchive:
+    src: /tmp/node_exporter.tar.gz
+    dest: /usr/local/bin/
+    remote_src: yes
+    mode: '0755'
+
+- name: Move node_exporter binary
+  shell: |
+    mv /usr/local/bin/node_exporter-1.7.0.linux-amd64/node_exporter /usr/local/bin/node_exporter
+    rm -rf /usr/local/bin/node_exporter-1.7.0.linux-amd64
+  args:
+    executable: /bin/bash
+
+- name: Stop existing node_exporter
+  shell: |
+    pkill -f node_exporter || true
+    killall node_exporter 2>/dev/null || true
+  ignore_errors: yes
+
+- name: Start node_exporter as node_exporter user
+  shell: |
+    su - contuser -c "nohup /usr/local/bin/node_exporter --web.listen-address=:9100 &"
+  async: 5
+  poll: 0
+  become: yes
+
+- name: Wait for node_exporter (check localhost)
+  wait_for:
+    port: 9100
+    host: "127.0.0.1"
+    delay: 2
+    timeout: 60

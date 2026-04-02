@@ -1,0 +1,113 @@
+---
+- name: All container list
+  set_fact:
+    container_list:
+      - lb1
+      - lb2
+      - backend1
+      - backend2
+      - victoriametrics
+      - grafana
+  run_once: true
+
+- name: Install ssh server in containers
+  community.docker.docker_container_exec:
+    container: "{{ item }}"
+    command: |
+      bash -c "
+        if ! dpkg -l | grep -q openssh-server; then
+          apt update && apt install -y openssh-server python3 python3-apt sudo
+        fi
+        mkdir -p /run/sshd
+      "
+    docker_host: "unix:///var/run/docker.sock"
+  loop: "{{ container_list }}"
+  loop_control:
+    label: "{{ item }}"
+  become: yes
+  run_once: true
+  environment:
+    DOCKER_HOST: "unix:///var/run/docker.sock"
+
+- name: Copy SSH configuration
+  community.docker.docker_container_exec:
+    container: "{{ item }}"
+    command: bash -c "cat > /etc/ssh/sshd_config"
+    stdin: "{{ lookup('template', 'sshd_config.j2') }}"
+    docker_host: "unix:///var/run/docker.sock"
+  loop: "{{ container_list }}"
+  loop_control:
+    label: "{{ item }}"
+  become: yes
+  run_once: true
+  environment:
+    DOCKER_HOST: "unix:///var/run/docker.sock"
+
+- name: Generate host keys and start SSH
+  community.docker.docker_container_exec:
+    container: "{{ item }}"
+    command: |
+      bash -c "ssh-keygen -A && /usr/sbin/sshd"
+    docker_host: "unix:///var/run/docker.sock"
+  loop: "{{ container_list }}"
+  loop_control:
+    label: "{{ item }}"
+  become: yes
+  run_once: true
+  environment:
+    DOCKER_HOST: "unix:///var/run/docker.sock"
+
+- name: Create ansible user
+  community.docker.docker_container_exec:
+    container: "{{ item }}"
+    command: |
+      bash -c "
+        useradd -m -s /bin/bash ansible
+        passwd -d ansible
+        mkdir -p /etc/sudoers.d
+        echo 'ansible ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/ansible
+        chmod 440 /etc/sudoers.d/ansible
+        mkdir -p /home/ansible/.ssh
+        chmod 700 /home/ansible/.ssh
+        chown ansible:ansible /home/ansible/.ssh
+      "
+    docker_host: "unix:///var/run/docker.sock"
+  loop: "{{ container_list }}"
+  loop_control:
+    label: "{{ item }}"
+  become: yes
+  run_once: true
+
+- name: Generate ansible SSH key
+  community.crypto.openssh_keypair:
+    path: /root/.ssh/ansible_key
+    type: rsa
+    size: 4096
+    comment: "ansible-key"
+    state: present
+    force: yes
+  run_once: true
+
+- name: Get public key
+  set_fact:
+    ansible_public_key: "{{ lookup('file', '/root/.ssh/ansible_key.pub') }}"
+  run_once: true
+
+- name: Add public key to containers
+  community.docker.docker_container_exec:
+    container: "{{ item }}"
+    command: |
+      bash -c "
+        echo '{{ ansible_public_key }}' > /home/ansible/.ssh/authorized_keys
+        chown -R ansible:ansible /home/ansible/.ssh
+        chmod 700 /home/ansible/.ssh
+        chmod 600 /home/ansible/.ssh/authorized_keys
+      "
+    docker_host: "unix:///var/run/docker.sock"
+  loop: "{{ container_list }}"
+  loop_control:
+    label: "{{ item }}"
+  become: yes
+  run_once: true
+  environment:
+    DOCKER_HOST: "unix:///var/run/docker.sock"

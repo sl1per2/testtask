@@ -1,0 +1,157 @@
+version: '3.8'
+
+networks:
+  cont-net:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_ip_masquerade: "true"
+      com.docker.network.bridge.enable_icc: "true"
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
+
+volumes:
+  shared_metrics:
+    driver: local
+
+
+services:
+  lb1:
+    build:
+      context: ./lb1
+      dockerfile: Dockerfile
+    container_name: lb1
+    hostname: lb1
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - shared_metrics:/tmp/shared
+    networks:
+      cont-net:
+        ipv4_address: 172.20.0.10
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    restart: unless-stopped
+
+  lb2:
+    build:
+      context: ./lb2
+      dockerfile: Dockerfile
+    container_name: lb2
+    hostname: lb2
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - shared_metrics:/tmp/shared
+    networks:
+      cont-net:
+        ipv4_address: 172.20.0.11
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    restart: unless-stopped
+
+  backend1:
+    build:
+      context: ./backend1
+      dockerfile: Dockerfile
+    container_name: backend1
+    hostname: backend1
+    networks:
+      cont-net:
+        ipv4_address: 172.20.0.20
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    restart: unless-stopped
+
+  backend2:
+    build:
+      context: ./backend2
+      dockerfile: Dockerfile
+    container_name: backend2
+    hostname: backend2
+    networks:
+      cont-net:
+        ipv4_address: 172.20.0.21
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    restart: unless-stopped
+
+  victoriametrics:
+    build:
+      context: ./monitoring/victoriametrics
+      dockerfile: Dockerfile
+    container_name: victoriametrics
+    hostname: victoriametrics
+    networks:
+      cont-net:
+        ipv4_address: 172.20.0.30
+    volumes:
+      - shared_metrics:/tmp/shared:ro
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    restart: unless-stopped
+
+  grafana:
+    build:
+      context: ./monitoring/grafana
+      dockerfile: Dockerfile
+    container_name: grafana
+    hostname: grafana
+    networks:
+      cont-net:
+        ipv4_address: 172.20.0.31
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    depends_on:
+      - victoriametrics
+    restart: unless-stopped
+
+  ansible:
+    build:
+      context: ./ansible
+      dockerfile: Dockerfile
+    container_name: ansible
+    hostname: ansible
+    networks:
+      cont-net:
+        ipv4_address: 172.20.0.40
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    volumes:
+      - ./ansible/root.yml:/ansible/root.yml
+      - ./ansible/inventory:/ansible/inventory
+      - ./ansible/group_vars:/ansible/group_vars
+      - ./ansible/roles:/ansible/roles
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./ansible/keys/:/ansible/keys
+    environment:
+      - ANSIBLE_HOST_KEY_CHECKING=False
+      - ANSIBLE_INVENTORY=/ansible/inventory/hosts.ini
+      - ANSIBLE_ROLES_PATH=/ansible/roles
+      - ANSIBLE_GROUP_VARS=/ansible/group_vars
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    depends_on:
+      - grafana
+      - victoriametrics
+      - lb1
+      - lb2
+      - backend1
+      - backend2
+    restart: no
+

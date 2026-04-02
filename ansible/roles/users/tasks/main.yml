@@ -1,0 +1,62 @@
+---
+- name: Create contuser on all containers
+  user:
+    name: contuser
+    comment: "Container User for services"
+    shell: /bin/bash
+    create_home: yes
+    home: /home/contuser
+    state: present
+
+- name: Create .ssh directory for contuser
+  file:
+    path: /home/contuser/.ssh
+    state: directory
+    owner: contuser
+    group: contuser
+    mode: '0700'
+
+- name: Add contuser public key to authorized_keys
+  copy:
+    content: "{{ lookup('file', '/ansible/keys/contuser_pub') }}"
+    dest: /home/contuser/.ssh/authorized_keys
+    owner: contuser
+    group: contuser
+    mode: '0600'
+
+- name: Ensure root .ssh directory exists
+  file:
+    path: /root/.ssh
+    state: directory
+    mode: '0700'
+
+- name: Add root public key to authorized_keys
+  copy:
+    content: "{{ lookup('file', '/ansible/keys/root_pub') }}"
+    dest: /root/.ssh/authorized_keys
+    mode: '0600'
+
+- name: Create sudoers for contuser on ansible container
+  copy:
+    dest: /etc/sudoers.d/contuser
+    content: |
+      contuser ALL=(ALL) NOPASSWD: /usr/bin/ansible-playbook
+      contuser ALL=(ALL) NOPASSWD: /usr/bin/ansible
+      contuser ALL=(ALL) NOPASSWD: /usr/bin/docker
+      contuser ALL=(ALL) NOPASSWD: /usr/local/bin/docker-compose
+  when: inventory_hostname == "ansible"
+
+- name: Create sudoers for contuser on other containers
+  copy:
+    dest: /etc/sudoers.d/contuser
+    content: |
+      contuser ALL=(ALL) NOPASSWD: /usr/sbin/keepalived
+      contuser ALL=(ALL) NOPASSWD: /usr/sbin/haproxy
+      contuser ALL=(ALL) NOPASSWD: /usr/local/bin/victoria-metrics-prod
+      contuser ALL=(ALL) NOPASSWD: /opt/grafana-8.3.0/bin/grafana-server
+      contuser ALL=(ALL) NOPASSWD: /bin/kill, /usr/bin/pkill
+      contuser ALL=(ALL) NOPASSWD: /usr/local/bin/keepalived_exporter.sh
+      contuser ALL=(ALL) NOPASSWD: /usr/local/bin/node_exporter
+      contuser ALL=(ALL) NOPASSWD: /app/backend
+      contuser ALL=(ALL) NOPASSWD: /opt/grafana-8.3.0/bin/grafana-server
+  when: inventory_hostname != "ansible"

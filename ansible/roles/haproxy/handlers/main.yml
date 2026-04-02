@@ -1,0 +1,8 @@
+---
+- name: restart haproxy
+  shell: |
+    pkill -15 haproxy 2>/dev/null || true
+    sleep 2
+    su - contuser -c "/usr/sbin/haproxy -f /etc/haproxy/haproxy.cfg"
+  become: yes
+  changed_when: false
