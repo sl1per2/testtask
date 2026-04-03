@@ -49,7 +49,7 @@ http://<ip хоста>:3000/
 - Login: admin
 - Password: admin
 
-### 5. Сменить пользователя приватного ключа на текущего и дать права на чтение к
+### 5. Сменить пользователя приватного ключа на текущего и дать права на чтение и запись
 - sudo chown <user>:<group> testtask/ansible/keys/*_private
 - sudo chmod 600 testtask/ansible/keys/*_private
 
