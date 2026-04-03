@@ -37,28 +37,14 @@
 
 ## Инструкция по запуску 
 
-### 1 Склонировать репозиторий 
+### 1. Склонировать репозиторий 
 git clone https://github.com/sl1per2/testtask
 
-### 1.1 Удаление ключей 
-Удалить ключи : 
-- sudo rm -f ansible/keys/root_private
-- sudo rm -f ansible/keys/root_pub
-- sudo rm -f ansible/keys/contuser_private
-- sudo rm -f ansible/keys/contuser_pub
-
-### 1.3 Cформировать свои ключи root_pub, contuser_pub - это необходимо, чтобы ansible разбросал ключи пользователей:
-- ssh-keygen -t rsa -b 4096 -f testtask/ansible/keys/contuser_private -N "" -C "contuser@ansible"
-- ssh-keygen -t rsa -b 4096 -f testtask/ansible/keys/root_private
-- mv testtask/ansible/keys/root_private.pub testtask/ansible/keys/root_pub
-- mv testtask/ansible/keys/contuser_private.pub testtask/ansible/keys/contuser_pub
-
-
-### 1.Собрать и  запустить контейнеры
+### 2.Собрать и  запустить контейнеры
 sudo docker compose -f testtask/docker-compose.yml up -d --build
-### 2. Установить и настроить ПО
+### 3. Установить и настроить ПО
 sudo docker exec ansible ansible-playbook root.yml -i inventory/hosts.ini
-### 3. Открыть grafana
+### 4. Открыть grafana
 http://<ip хоста>:3000/
 Login: admin
 Password: admin
