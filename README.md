@@ -46,8 +46,8 @@ sudo docker compose -f testtask/docker-compose.yml up -d --build
 sudo docker exec ansible ansible-playbook root.yml -i inventory/hosts.ini
 ### 4. Открыть grafana
 http://<ip хоста>:3000/
-Login: admin
-Password: admin
+- Login: admin
+- Password: admin
 
 #### доступ к контейнеру ansible
 
