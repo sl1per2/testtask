@@ -19,32 +19,41 @@
 
 - name: Generate contuser SSH key
   openssh_keypair:
-    path: ansible/keys/contuser_private
+    path: "{{ playbook_dir }}/keys/contuser_private"
     type: rsa
     size: 4096
     state: present
     force: no
+  delegate_to: localhost
+  run_once: true
 
 - name: Generate root SSH key
   openssh_keypair:
-    path: ansible/keys/root_private
+    path: "{{ playbook_dir }}/keys/root_private"
     type: rsa
     size: 4096
     state: present
     force: no
+  delegate_to: localhost
+  run_once: true
 
 - name: Copy root public key
   copy:
-    src: ansible/keys/root_private.pub
-    dest: ansible/keys/root_pub
+    src: "{{ playbook_dir }}/keys/root_private.pub"
+    dest: "{{ playbook_dir }}/keys/root_pub"
     mode: '0644'
     force: no
+  delegate_to: localhost
+  run_once: true
 
 - name: Copy contuser public key
   copy:
-    src: ansible/keys/contuser_private.pub
-    dest: ansible/keys/contuser_pub
+    src: "{{ playbook_dir }}/keys/contuser_private.pub"
+    dest: "{{ playbook_dir }}/keys/contuser_pub"
     mode: '0644'
+    force: no
+  delegate_to: localhost
+  run_once: true
 
 - name: Add contuser public key to authorized_keys
   copy:
