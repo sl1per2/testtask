@@ -7,12 +7,7 @@
     create_home: yes
     home: /home/contuser
     state: present
-
-- name: Unlock contuser account
-  command: passwd -u contuser
-  become: yes
-  ignore_errors: yes
-
+    password_lock: no
 
 - name: Create .ssh directory for contuser
   file:
@@ -21,6 +16,35 @@
     owner: contuser
     group: contuser
     mode: '0700'
+
+- name: Generate contuser SSH key
+  openssh_keypair:
+    path: ansible/keys/contuser_private
+    type: rsa
+    size: 4096
+    state: present
+    force: no
+
+- name: Generate root SSH key
+  openssh_keypair:
+    path: ansible/keys/root_private
+    type: rsa
+    size: 4096
+    state: present
+    force: no
+
+- name: Copy root public key
+  copy:
+    src: ansible/keys/root_private.pub
+    dest: ansible/keys/root_pub
+    mode: '0644'
+    force: no
+
+- name: Copy contuser public key
+  copy:
+    src: ansible/keys/contuser_private.pub
+    dest: ansible/keys/contuser_pub
+    mode: '0644'
 
 - name: Add contuser public key to authorized_keys
   copy:

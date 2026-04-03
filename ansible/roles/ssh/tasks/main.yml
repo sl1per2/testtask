@@ -85,7 +85,7 @@
     size: 4096
     comment: "ansible-key"
     state: present
-    force: yes
+    force: no
   run_once: true
 
 - name: Get public key

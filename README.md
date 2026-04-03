@@ -28,31 +28,32 @@
 | Ansible               | Автоматизация                       |
 | Docker                | Контейнеризация                     |
 
-#### доступ к контейнеру ansible
+## Требования к окружению
 
-docker exec -it ansible /bin/bash
-ssh  contuser@172.20.0.40 -i cat ansible/keys/contuser_private
-ssh  root@172.20.0.40 -i cat ansible/keys/root_private
+ - Docker Engine
+ - Docker Compose
+ - Git
 
 
 ## Инструкция по запуску 
-### 0 Удаление ключей 
-Удалить: 
-ansible/keys/root_private
-ansible/keys/root_pub
-ansible/keys/contuser_private
-ansible/keys/contuser_pub
 
+### 1. Склонировать репозиторий 
+git clone https://github.com/sl1per2/testtask
 
-Cформировать свои ключи root_pub, contuser_pub - это необходимо, чтобы ansible разбросал ключи пользователей
-
-### 1.Собрать и  запустить контейнеры
-docker-compose up -d
-### 2. Установить и настроить ПО
-docker exec ansible ansible-playbook root.yml 
-### 3. Открыть grafana
+### 2.Собрать и  запустить контейнеры
+sudo docker compose -f testtask/docker-compose.yml up -d --build
+### 3. Установить и настроить ПО
+sudo docker exec ansible ansible-playbook root.yml -i inventory/hosts.ini
+### 4. Открыть grafana
 http://<ip хоста>:3000/
-Доступы стандартные
+Login: admin
+Password: admin
+
+#### доступ к контейнеру ansible
+
+- docker exec -it ansible /bin/bash
+- ssh  contuser@172.20.0.40 -i cat ansible/keys/contuser_private
+- ssh  root@172.20.0.40 -i cat ansible/keys/root_private
 
 
 ## Скриншоты даш борда
@@ -62,4 +63,3 @@ http://<ip хоста>:3000/
 При отключении значение VIP меняется в таблице Active VIP меняется на lb2, таблица Keepalived Status меняет мастер ноду. 
 
 <img width="1868" height="912" alt="{0ED5F731-E197-494A-B2FA-B5E173BB158D}" src="https://github.com/user-attachments/assets/f5646827-7119-40c7-a88d-3df863c23510" />
-
