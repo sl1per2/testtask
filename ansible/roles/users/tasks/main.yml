@@ -8,6 +8,12 @@
     home: /home/contuser
     state: present
 
+- name: Unlock contuser account
+  command: passwd -u contuser
+  become: yes
+  ignore_errors: yes
+
+
 - name: Create .ssh directory for contuser
   file:
     path: /home/contuser/.ssh
