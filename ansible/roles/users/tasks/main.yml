@@ -7,7 +7,9 @@
     create_home: yes
     home: /home/contuser
     state: present
-    password_lock: no
+    password: "{{ 'temp123' | password_hash('sha512') }}"
+    update_password: on_create
+  register: user_created
 
 - name: Create .ssh directory for contuser
   file:
@@ -99,3 +101,9 @@
       contuser ALL=(ALL) NOPASSWD: /app/backend
       contuser ALL=(ALL) NOPASSWD: /opt/grafana-8.3.0/bin/grafana-server
   when: inventory_hostname != "ansible"
+
+- name: Force unlock contuser if needed
+  command: passwd -u contuser
+  become: yes
+  when: user_created.changed
+  ignore_errors: yes
