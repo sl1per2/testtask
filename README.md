@@ -51,7 +51,7 @@ Password: admin
 
 #### доступ к контейнеру ansible
 
-- docker exec -it ansible /bin/bash
+- sudo docker exec -it ansible /bin/bash
 - ssh  contuser@172.20.0.40 -i cat ansible/keys/contuser_private
 - ssh  root@172.20.0.40 -i cat ansible/keys/root_private
 
