@@ -49,11 +49,15 @@ http://<ip хоста>:3000/
 - Login: admin
 - Password: admin
 
-#### доступ к контейнеру ansible
+### 5. Сменить пользователя приватного ключа на текущего и дать права на чтение к
+- sudo chown <user>:<group> testtask/ansible/keys/*_private
+- sudo chmod 600 testtask/ansible/keys/*_private
+
+## Доступ к контейнеру ansible
 
 - sudo docker exec -it ansible /bin/bash
-- ssh  contuser@172.20.0.40 -i cat ansible/keys/contuser_private
-- ssh  root@172.20.0.40 -i cat ansible/keys/root_private
+- ssh contuser@172.20.0.40 -i cat ansible/keys/contuser_private
+- ssh root@172.20.0.40 -i cat ansible/keys/root_private
 
 
 ## Скриншоты даш борда
