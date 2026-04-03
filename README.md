@@ -56,8 +56,8 @@ http://<ip хоста>:3000/
 ## Доступ к контейнеру ansible
 
 - sudo docker exec -it ansible /bin/bash
-- ssh contuser@172.20.0.40 -i cat ansible/keys/contuser_private
-- ssh root@172.20.0.40 -i cat ansible/keys/root_private
+- ssh contuser@172.20.0.40 -i testtask/ansible/keys/contuser_private
+- ssh root@172.20.0.40 -i testtask/ansible/keys/root_private
 
 
 ## Скриншоты даш борда
