@@ -28,31 +28,46 @@
 | Ansible               | Автоматизация                       |
 | Docker                | Контейнеризация                     |
 
+## Требования к окружению
+
+ - Docker Engine
+ - Docker Compose
+ - Git
+
+
+## Инструкция по запуску 
+
+### 1 Склонировать репозиторий 
+git clone https://github.com/sl1per2/testtask
+
+### 1.1 Удаление ключей 
+Удалить ключи : 
+- sudo rm -f ansible/keys/root_private
+- sudo rm -f ansible/keys/root_pub
+- sudo rm -f ansible/keys/contuser_private
+- sudo rm -f ansible/keys/contuser_pub
+
+### 1.3 Cформировать свои ключи root_pub, contuser_pub - это необходимо, чтобы ansible разбросал ключи пользователей:
+- ssh-keygen -t rsa -b 4096 -f testtask/ansible/keys/contuser_private -N "" -C "contuser@ansible"
+- ssh-keygen -t rsa -b 4096 -f testtask/ansible/keys/root_private
+- mv testtask/ansible/keys/root_private.pub testtask/ansible/keys/root_pub
+- mv testtask/ansible/keys/contuser_private.pub testtask/ansible/keys/contuser_pub
+
+
+### 1.Собрать и  запустить контейнеры
+sudo docker compose -f testtask/docker-compose.yml up -d --build
+### 2. Установить и настроить ПО
+sudo docker exec ansible ansible-playbook root.yml -i inventory/hosts.ini
+### 3. Открыть grafana
+http://<ip хоста>:3000/
+Login: admin
+Password: admin
+
 #### доступ к контейнеру ansible
 
 docker exec -it ansible /bin/bash
 ssh  contuser@172.20.0.40 -i cat ansible/keys/contuser_private
 ssh  root@172.20.0.40 -i cat ansible/keys/root_private
-
-
-## Инструкция по запуску 
-### 0 Удаление ключей 
-Удалить: 
-ansible/keys/root_private
-ansible/keys/root_pub
-ansible/keys/contuser_private
-ansible/keys/contuser_pub
-
-
-Cформировать свои ключи root_pub, contuser_pub - это необходимо, чтобы ansible разбросал ключи пользователей
-
-### 1.Собрать и  запустить контейнеры
-docker-compose up -d
-### 2. Установить и настроить ПО
-docker exec ansible ansible-playbook root.yml 
-### 3. Открыть grafana
-http://<ip хоста>:3000/
-Доступы стандартные
 
 
 ## Скриншоты даш борда
