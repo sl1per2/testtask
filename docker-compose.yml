@@ -95,13 +95,12 @@ services:
       dockerfile: Dockerfile
     container_name: victoriametrics
     hostname: victoriametrics
-    volumes:
-      - ./victoriametrics/checkservice.sh:/checkservice.sh
     networks:
       cont-net:
         ipv4_address: 172.20.0.30
     volumes:
       - shared_metrics:/tmp/shared:ro
+      - ./victoriametrics/checkservice.sh:/checkservice.sh
     dns:
       - 8.8.8.8
       - 1.1.1.1
