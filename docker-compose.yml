@@ -140,6 +140,7 @@ services:
       - ./ansible/roles:/ansible/roles
       - /var/run/docker.sock:/var/run/docker.sock
       - ./ansible/keys/:/ansible/keys
+      - ./ansible/upperservices.sh:/ansible/upperservices.sh
     environment:
       - ANSIBLE_HOST_KEY_CHECKING=False
       - ANSIBLE_INVENTORY=/ansible/inventory/hosts.ini
