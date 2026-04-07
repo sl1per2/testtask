@@ -1,6 +1,6 @@
 # testtask
 ## Архитектура проекта
-<img width="695" height="444" alt="{195E9A30-1156-41D7-94FA-472129196FD7}" src="https://github.com/user-attachments/assets/adecfb5c-7c04-4a00-b5d5-6dacbb26166d" />
+<img width="906" height="470" alt="{29C44E1F-AF0A-49A1-9461-20D69E8B3C8E}" src="https://github.com/user-attachments/assets/5610654a-7ec5-4409-986e-254c82a491be" />
 
 
 
@@ -38,26 +38,41 @@
 ## Инструкция по запуску 
 
 ### 1. Склонировать репозиторий 
+  ```bash
 git clone https://github.com/sl1per2/testtask
-
+  ```
 ### 2.Собрать и  запустить контейнеры
+```bash
 sudo docker compose -f testtask/docker-compose.yml up -d --build
+```
 ### 3. Установить и настроить ПО
+```bash
 sudo docker exec ansible ansible-playbook root.yml -i inventory/hosts.ini
+```
 ### 4. Открыть grafana
 http://<ip хоста>:3000/
 - Login: admin
 - Password: admin
 
 ### 5. Сменить пользователя приватного ключа на текущего и дать права на чтение и запись
-- sudo chown <пользователь>:<группа> testtask/ansible/keys/*_private
-- sudo chmod 600 testtask/ansible/keys/*_private
+```bash
+sudo chown <пользователь>:<группа> testtask/ansible/keys/*_private
+```
+```bash
+sudo chmod 600 testtask/ansible/keys/*_private
+```
+
 
 ## Доступ к контейнеру ansible
-
-- sudo docker exec -it ansible /bin/bash
-- ssh contuser@172.20.0.40 -i testtask/ansible/keys/contuser_private
-- ssh root@172.20.0.40 -i testtask/ansible/keys/root_private
+```bash
+sudo docker exec -it ansible /bin/bash
+```
+```bash
+ssh contuser@172.20.0.40 -i testtask/ansible/keys/contuser_private
+```
+```bash
+ssh root@172.20.0.40 -i testtask/ansible/keys/root_private
+```
 
 
 ## Скриншоты даш борда
