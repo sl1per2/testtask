@@ -1,6 +1,7 @@
 # testtask
 ## Архитектура проекта
-<img width="906" height="470" alt="{29C44E1F-AF0A-49A1-9461-20D69E8B3C8E}" src="https://github.com/user-attachments/assets/5610654a-7ec5-4409-986e-254c82a491be" />
+
+<img width="814" height="553" alt="{7FD15784-4F66-4C1C-93A4-312B749D2801}" src="https://github.com/user-attachments/assets/a262683b-a73a-491d-8a3e-ae3b8fb09ed2" />
 
 
 
